@@ -39,8 +39,32 @@ class BroadcastStates(StatesGroup):
 
 
 # ═══════════════════════════════════════════════════════════
+# 📝 ПЕРСОНАЛИЗАЦИЯ СООБЩЕНИЙ
+# ═══════════════════════════════════════════════════════════
+
+def format_message(text: str, user: types.User) -> str:
+    """Форматирует сообщение с подстановкой данных пользователя"""
+    name = user.first_name or "друг"
+    fullname = f"{user.first_name or ''} {user.last_name or ''}".strip() or "друг"
+    username = f"@{user.username}" if user.username else name
+    
+    return text.format(
+        name=name,
+        fullname=fullname,
+        username=username
+    )
+
+
+# ═══════════════════════════════════════════════════════════
 # 🎛️ КЛАВИАТУРЫ
 # ═══════════════════════════════════════════════════════════
+
+def get_welcome_keyboard() -> InlineKeyboardMarkup:
+    """Клавиатура приветствия"""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="Начать Путь 👣", callback_data="start_path")]
+    ])
+
 
 def get_admin_keyboard() -> InlineKeyboardMarkup:
     """Клавиатура админ-панели"""
@@ -98,8 +122,9 @@ async def handle_join_request(update: types.ChatJoinRequest):
             last_name=user.last_name
         )
         
-        # Отправляем приветственное сообщение в личку
-        await bot.send_message(user.id, WELCOME_MESSAGE)
+        # Отправляем персонализированное приветствие с кнопкой
+        welcome_text = format_message(WELCOME_MESSAGE, user)
+        await bot.send_message(user.id, welcome_text, reply_markup=get_welcome_keyboard())
         logger.info(f"📨 Приветствие отправлено: {user.id}")
         
     except Exception as e:
@@ -125,8 +150,23 @@ async def cmd_start(message: types.Message):
     
     logger.info(f"Новый пользователь: {user.id} (@{user.username})")
     
-    # Отправляем приветствие
-    await message.answer(WELCOME_MESSAGE)
+    # Отправляем персонализированное приветствие с кнопкой
+    welcome_text = format_message(WELCOME_MESSAGE, user)
+    await message.answer(welcome_text, reply_markup=get_welcome_keyboard())
+
+
+@dp.callback_query(F.data == "start_path")
+async def start_path_handler(callback: types.CallbackQuery):
+    """Обработка нажатия кнопки 'Начать Путь'"""
+    user = callback.from_user
+    
+    # Здесь будет логика теста (добавим позже)
+    await callback.message.edit_text(
+        f"🚀 <b>Отлично, {user.first_name}!</b>\n\n"
+        "Сейчас мы определим твой уровень...\n\n"
+        "<i>🔧 Тест в разработке — скоро будет готов!</i>"
+    )
+    await callback.answer()
 
 
 # ═══════════════════════════════════════════════════════════
